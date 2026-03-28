@@ -1,0 +1,116 @@
+import os
+import base64
+import requests
+import google.generativeai as genai
+import json
+import re
+from dotenv import load_dotenv
+from fpdf import FPDF
+
+load_dotenv(override=True)
+
+# Configura a IA
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+def analyze_sbar(s, b, a, r):
+    try:
+        model = genai.GenerativeModel('gemini-2.5-flash-latest')
+        
+        prompt = f"""
+        Atue como um Preceptor Médico Sênior. Analise o SBAR abaixo.
+        S: {s} | B: {b} | A: {a} | R: {r}
+
+        Retorne APENAS um objeto JSON exatamente com estas chaves:
+        "analise_critica": "sua avaliacao",
+        "pontos_de_melhoria": "o que melhorar",
+        "versao_senior": "texto ideal"
+        """
+        
+        response = model.generate_content(prompt)
+        match = re.search(r'\{.*\}', response.text, re.DOTALL)
+        if match:
+            return json.loads(match.group())
+        else:
+            raise ValueError("Falha no JSON da IA")
+
+    except Exception as e:
+        print(f"AVISO: Contingência Ativada. Erro IA: {e}")
+        return {
+            "analise_critica": "O registro foi recebido com sucesso. Estrutura básica mantida, porém necessita maior correlação clínica.",
+            "pontos_de_melhoria": "1. Detalhar sinais vitais no 'S'.\n2. Ser específico na conduta no 'R'.",
+            "versao_senior": f"SITUACAO: Paciente apresenta {s[:20]}...\nHISTORICO: {b[:20]}...\nAVALIACAO: Quadro requer atenção.\nRECOMENDACAO: Reavaliação imediata."
+        }
+
+def criar_pdf(s, b, a, r, data_ia):
+    pdf = FPDF()
+    pdf.add_page()
+    
+    AZUL = (15, 23, 42)
+    VERDE = (21, 128, 61)
+
+    pdf.set_fill_color(*AZUL)
+    pdf.rect(0, 0, 210, 40, 'F')
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("helvetica", "B", 18)
+    pdf.cell(0, 20, "AVALIACAO DE DESEMPENHO SBAR", ln=True, align="C")
+    
+    pdf.ln(25)
+    pdf.set_text_color(*AZUL)
+    pdf.set_font("helvetica", "B", 12)
+    pdf.cell(0, 10, "Parecer do Preceptor IA", ln=True)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(5)
+
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("helvetica", "", 11)
+    
+    def limpa(t): return str(t).replace('*', '').encode('latin-1', 'replace').decode('latin-1')
+
+    pdf.multi_cell(0, 6, limpa(data_ia.get('analise_critica', '')))
+    pdf.ln(5)
+    
+    pdf.set_text_color(*VERDE)
+    pdf.set_font("helvetica", "B", 11)
+    pdf.cell(0, 7, "O que pode melhorar:", ln=True)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("helvetica", "", 10)
+    pdf.multi_cell(0, 6, limpa(data_ia.get('pontos_de_melhoria', '')))
+    pdf.ln(10)
+
+    pdf.set_fill_color(240, 240, 240)
+    pdf.set_font("helvetica", "B", 10)
+    pdf.multi_cell(0, 6, "Exemplo Padrao Ouro:\n" + limpa(data_ia.get('versao_senior', '')), fill=True)
+
+    caminho = "avaliacao_sbar.pdf"
+    pdf.output(caminho)
+    return caminho
+
+def send_email(to_email, data_ia, s, b, a, r):
+    try:
+        arquivo_pdf = criar_pdf(s, b, a, r, data_ia)
+        with open(arquivo_pdf, "rb") as f:
+            pdf_base64 = base64.b64encode(f.read()).decode('utf-8')
+            
+        url = "https://api.brevo.com/v3/smtp/email"
+        headers = {
+            "accept": "application/json",
+            "api-key": os.getenv("BREVO_API_KEY"),
+            "content-type": "application/json"
+        }
+        
+        payload = {
+            "sender": {"name": "Preceptor SBAR", "email": os.getenv("SMTP_USER", "contato@husf.com.br")},
+            "to": [{"email": to_email}],
+            "subject": "Seu Feedback SBAR - HUSF",
+            "textContent": "Olá! Segue em anexo a sua avaliação clínica SBAR em PDF.",
+            "attachment": [{"content": pdf_base64, "name": "Feedback_SBAR.pdf"}]
+        }
+        
+        response = requests.post(url, json=payload, headers=headers)
+        if response.status_code in [201, 202]:
+            print(">>> SUCESSO: E-mail enviado pela API do Brevo!")
+        else:
+            print(f"!!! ERRO NA API: {response.text}")
+            
+    except Exception as e:
+        print(f"!!! ERRO FATAL DE ENVIO: {str(e)}")

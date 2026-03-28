@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+google-generativeai
+python-dotenv
+fpdf2
+email-validator
+requests

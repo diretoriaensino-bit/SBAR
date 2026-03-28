@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador SBAR - HUSF</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen p-6 font-sans text-slate-800">
+
+    <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-blue-900 p-6 text-white text-center">
+            <h1 class="text-3xl font-bold">Simulador SBAR Clínico</h1>
+            <p class="text-blue-200 mt-2">Treinamento de Comunicação - HUSF</p>
+        </div>
+
+        <form id="sbarForm" class="p-8 space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-semibold mb-2">Nome do Aluno/Médico</label>
+                    <input type="text" id="student_name" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2">E-mail para receber o PDF</label>
+                    <input type="email" id="student_email" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <hr>
+
+            <div>
+                <label class="block font-bold text-blue-900 mb-2">S - Situação (Situation)</label>
+                <textarea id="situation" rows="3" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Qual o problema principal do paciente agora?"></textarea>
+            </div>
+
+            <div>
+                <label class="block font-bold text-blue-900 mb-2">B - Histórico (Background)</label>
+                <textarea id="background" rows="3" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Qual o contexto clínico e antecedentes?"></textarea>
+            </div>
+
+            <div>
+                <label class="block font-bold text-blue-900 mb-2">A - Avaliação (Assessment)</label>
+                <textarea id="assessment" rows="3" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Qual a sua avaliação do problema?"></textarea>
+            </div>
+
+            <div>
+                <label class="block font-bold text-blue-900 mb-2">R - Recomendação (Recommendation)</label>
+                <textarea id="recommendation" rows="3" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="O que você sugere que seja feito?"></textarea>
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-lg shadow-md transition-colors text-lg">
+                Enviar para Avaliação da IA
+            </button>
+        </form>
+
+        <div id="statusMessage" class="hidden p-4 mb-6 mx-8 rounded-lg text-center font-bold"></div>
+    </div>
+
+    <script>
+        document.getElementById('sbarForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const msg = document.getElementById('statusMessage');
+            
+            btn.disabled = true;
+            btn.innerText = "Enviando e processando...";
+            msg.className = "hidden";
+
+            const payload = {
+                student_name: document.getElementById('student_name').value,
+                student_email: document.getElementById('student_email').value,
+                situation: document.getElementById('situation').value,
+                background: document.getElementById('background').value,
+                assessment: document.getElementById('assessment').value,
+                recommendation: document.getElementById('recommendation').value
+            };
+
+            try {
+                // Como o frontend e o backend estão juntos no Railway, usamos o caminho relativo
+                const response = await fetch('/api/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if(response.ok) {
+                    msg.innerText = result.message;
+                    msg.className = "p-4 mb-6 mx-8 rounded-lg text-center font-bold bg-green-100 text-green-800 block";
+                    e.target.reset();
+                } else {
+                    msg.innerText = "Erro: " + (result.detail || "Falha no servidor");
+                    msg.className = "p-4 mb-6 mx-8 rounded-lg text-center font-bold bg-red-100 text-red-800 block";
+                }
+            } catch (error) {
+                msg.innerText = "Erro de conexão com o servidor.";
+                msg.className = "p-4 mb-6 mx-8 rounded-lg text-center font-bold bg-red-100 text-red-800 block";
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Enviar para Avaliação da IA";
+            }
+        });
+    </script>
+</body>
+</html>
