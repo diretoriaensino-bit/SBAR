@@ -32,7 +32,7 @@ def analyze_sbar(s, b, a, r):
         
         # Chamada para o modelo Llama 3 (Ultra rápido e gratuito)
         response = client.chat.completions.create(
-            model="llama3-8b-8192",
+           model="llama-3.3-70b-versatile",
             response_format={ "type": "json_object" },
             messages=[
                 {"role": "system", "content": "Você é um preceptor médico sênior. Retorne apenas JSON válido."},
