@@ -2,7 +2,7 @@ fastapi
 uvicorn
 sqlalchemy
 pydantic
-google-generativeai
+openai
 python-dotenv
 fpdf2
 email-validator

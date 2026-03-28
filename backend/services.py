@@ -1,26 +1,23 @@
 import os
 import base64
 import requests
-import google.generativeai as genai
 import json
-import re
+from openai import OpenAI
 from dotenv import load_dotenv
 from fpdf import FPDF
 
 load_dotenv(override=True)
 
-# Configura a IA
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# Inicia o motor da OpenAI
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def analyze_sbar(s, b, a, r):
     try:
-        model = genai.GenerativeModel('gemini-pro')
-        
         prompt = f"""
-        Atue como um Preceptor Médico Sênior. Analise o SBAR abaixo.
+        Analise o SBAR abaixo.
         S: {s} | B: {b} | A: {a} | R: {r}
 
-        Responda APENAS com um objeto JSON válido, usando estas exatas chaves em minúsculo:
+        Responda EXATAMENTE neste formato JSON, usando estas exatas chaves em minúsculo:
         {{
             "analise_critica": "sua avaliacao aqui",
             "pontos_de_melhoria": "o que melhorar aqui",
@@ -28,22 +25,25 @@ def analyze_sbar(s, b, a, r):
         }}
         """
         
-        response = model.generate_content(prompt)
+        # Chamada de Elite para a OpenAI (Forçando formato JSON nativo)
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            response_format={ "type": "json_object" },
+            messages=[
+                {"role": "system", "content": "Você é um preceptor médico sênior. Retorne apenas JSON válido."},
+                {"role": "user", "content": prompt}
+            ]
+        )
         
-        # O Caçador de JSON (Garante que vai pegar só o código, mesmo se a IA falar "Olá")
-        match = re.search(r'\{.*\}', response.text, re.DOTALL)
-        if match:
-            dados = json.loads(match.group())
-            print(f">>> IA RESPONDEU COM SUCESSO: {dados}")
-            return dados
-        else:
-            raise ValueError("A IA não retornou um JSON válido.")
+        dados = json.loads(response.choices[0].message.content)
+        print(f">>> OPENAI RESPONDEU COM SUCESSO: {dados}")
+        return dados
 
     except Exception as e:
-        print(f"!!! AVISO: IA FALHOU. MOTIVO: {e}")
+        print(f"!!! AVISO: OPENAI FALHOU. MOTIVO: {e}")
         return {
-            "analise_critica": f"ALERTA: Erro no modelo da IA ({e}).",
-            "pontos_de_melhoria": "Verifique a chave e o nome do modelo.",
+            "analise_critica": f"ALERTA: Erro na IA ({e}).",
+            "pontos_de_melhoria": "Verifique a chave OPENAI_API_KEY no painel do Railway.",
             "versao_senior": "Por favor, contate a Diretoria de Ensino."
         }
 
