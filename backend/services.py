@@ -8,8 +8,13 @@ from fpdf import FPDF
 
 load_dotenv(override=True)
 
-# Inicia o motor da OpenAI
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# -------------------------------------------------------------
+# LIGAÇÃO DO MOTOR GROQ (Usando a biblioteca da OpenAI)
+# -------------------------------------------------------------
+client = OpenAI(
+    api_key=os.getenv("GROQ_API_KEY"),
+    base_url="https://api.groq.com/openai/v1"
+)
 
 def analyze_sbar(s, b, a, r):
     try:
@@ -25,9 +30,9 @@ def analyze_sbar(s, b, a, r):
         }}
         """
         
-        # Chamada de Elite para a OpenAI (Forçando formato JSON nativo)
+        # Chamada para o modelo Llama 3 (Ultra rápido e gratuito)
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="llama3-8b-8192",
             response_format={ "type": "json_object" },
             messages=[
                 {"role": "system", "content": "Você é um preceptor médico sênior. Retorne apenas JSON válido."},
@@ -36,14 +41,14 @@ def analyze_sbar(s, b, a, r):
         )
         
         dados = json.loads(response.choices[0].message.content)
-        print(f">>> OPENAI RESPONDEU COM SUCESSO: {dados}")
+        print(f">>> GROQ RESPONDEU COM SUCESSO: {dados}")
         return dados
 
     except Exception as e:
-        print(f"!!! AVISO: OPENAI FALHOU. MOTIVO: {e}")
+        print(f"!!! AVISO: GROQ FALHOU. MOTIVO: {e}")
         return {
             "analise_critica": f"ALERTA: Erro na IA ({e}).",
-            "pontos_de_melhoria": "Verifique a chave OPENAI_API_KEY no painel do Railway.",
+            "pontos_de_melhoria": "Verifique a chave GROQ_API_KEY no painel do Railway.",
             "versao_senior": "Por favor, contate a Diretoria de Ensino."
         }
 
