@@ -14,31 +14,36 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 def analyze_sbar(s, b, a, r):
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash-latest')
+        model = genai.GenerativeModel('gemini-1.5-flash-latest')
         
         prompt = f"""
         Atue como um Preceptor Médico Sênior. Analise o SBAR abaixo.
         S: {s} | B: {b} | A: {a} | R: {r}
 
-        Retorne APENAS um objeto JSON exatamente com estas chaves:
-        "analise_critica": "sua avaliacao",
-        "pontos_de_melhoria": "o que melhorar",
-        "versao_senior": "texto ideal"
+        Responda EXATAMENTE neste formato JSON, usando estas exatas chaves em minúsculo:
+        {{
+            "analise_critica": "sua avaliacao aqui",
+            "pontos_de_melhoria": "o que melhorar aqui",
+            "versao_senior": "texto ideal aqui"
+        }}
         """
         
-        response = model.generate_content(prompt)
-        match = re.search(r'\{.*\}', response.text, re.DOTALL)
-        if match:
-            return json.loads(match.group())
-        else:
-            raise ValueError("Falha no JSON da IA")
+        # O PULO DO GATO: Obriga a IA a devolver um JSON perfeito e limpo
+        response = model.generate_content(
+            prompt,
+            generation_config={"response_mime_type": "application/json"}
+        )
+        
+        dados = json.loads(response.text)
+        print(f">>> IA RESPONDEU COM SUCESSO: {dados}") # Vai aparecer nos Logs do Railway!
+        return dados
 
     except Exception as e:
-        print(f"AVISO: Contingência Ativada. Erro IA: {e}")
+        print(f"!!! AVISO: IA FALHOU. MOTIVO: {e}")
         return {
-            "analise_critica": "O registro foi recebido com sucesso. Estrutura básica mantida, porém necessita maior correlação clínica.",
-            "pontos_de_melhoria": "1. Detalhar sinais vitais no 'S'.\n2. Ser específico na conduta no 'R'.",
-            "versao_senior": f"SITUACAO: Paciente apresenta {s[:20]}...\nHISTORICO: {b[:20]}...\nAVALIACAO: Quadro requer atenção.\nRECOMENDACAO: Reavaliação imediata."
+            "analise_critica": "ALERTA: A IA não pôde avaliar este caso. Verifique a chave de API (GEMINI_API_KEY) no painel do Railway.",
+            "pontos_de_melhoria": "Se esta mensagem apareceu, o sistema de contingência foi ativado.",
+            "versao_senior": "Por favor, contate a Diretoria de Ensino."
         }
 
 def criar_pdf(s, b, a, r, data_ia):
