@@ -14,13 +14,13 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 def analyze_sbar(s, b, a, r):
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        model = genai.GenerativeModel('gemini-pro')
         
         prompt = f"""
         Atue como um Preceptor Médico Sênior. Analise o SBAR abaixo.
         S: {s} | B: {b} | A: {a} | R: {r}
 
-        Responda EXATAMENTE neste formato JSON, usando estas exatas chaves em minúsculo:
+        Responda APENAS com um objeto JSON válido, usando estas exatas chaves em minúsculo:
         {{
             "analise_critica": "sua avaliacao aqui",
             "pontos_de_melhoria": "o que melhorar aqui",
@@ -28,21 +28,22 @@ def analyze_sbar(s, b, a, r):
         }}
         """
         
-        # O PULO DO GATO: Obriga a IA a devolver um JSON perfeito e limpo
-        response = model.generate_content(
-            prompt,
-            generation_config={"response_mime_type": "application/json"}
-        )
+        response = model.generate_content(prompt)
         
-        dados = json.loads(response.text)
-        print(f">>> IA RESPONDEU COM SUCESSO: {dados}") # Vai aparecer nos Logs do Railway!
-        return dados
+        # O Caçador de JSON (Garante que vai pegar só o código, mesmo se a IA falar "Olá")
+        match = re.search(r'\{.*\}', response.text, re.DOTALL)
+        if match:
+            dados = json.loads(match.group())
+            print(f">>> IA RESPONDEU COM SUCESSO: {dados}")
+            return dados
+        else:
+            raise ValueError("A IA não retornou um JSON válido.")
 
     except Exception as e:
         print(f"!!! AVISO: IA FALHOU. MOTIVO: {e}")
         return {
-            "analise_critica": "ALERTA: A IA não pôde avaliar este caso. Verifique a chave de API (GEMINI_API_KEY) no painel do Railway.",
-            "pontos_de_melhoria": "Se esta mensagem apareceu, o sistema de contingência foi ativado.",
+            "analise_critica": f"ALERTA: Erro no modelo da IA ({e}).",
+            "pontos_de_melhoria": "Verifique a chave e o nome do modelo.",
             "versao_senior": "Por favor, contate a Diretoria de Ensino."
         }
 
