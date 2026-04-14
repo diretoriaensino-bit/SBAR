@@ -78,7 +78,7 @@ def criar_pdf(s, b, a, r, data_ia):
     pdf.set_font("helvetica", "B", 18)
     pdf.cell(0, 15, "RELATORIO DE PRECEPTORIA - SBAR", ln=True, align="C")
     pdf.set_font("helvetica", "I", 11)
-    pdf.cell(0, 5, "Hospital Universitario Sao Francisco na Providencia de Deus", ln=True, align="C")
+    pdf.cell(0, 5, "Hospital Universitário Sagrada Saúde", ln=True, align="C")
     pdf.ln(15)
 
     # 1. O QUE O ALUNO ENVIOU
