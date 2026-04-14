@@ -55,8 +55,22 @@ def analyze_sbar(s, b, a, r):
             "padrao_ouro": "Por favor, contate a Diretoria de Ensino."
         }
 
+# --- A SUA ASSINATURA DE ELITE (RODAPÉ) ---
+class PDF_HUSF(FPDF):
+    def footer(self):
+        # Posiciona o texto a 1.5 cm do final da página
+        self.set_y(-15)
+        # Fonte Helvetica, Itálico, tamanho 8
+        self.set_font("helvetica", "I", 8)
+        # Cor cinza discreto
+        self.set_text_color(150, 150, 150)
+        # MUDE O SEU NOME AQUI EMBAIXO:
+        self.cell(0, 10, "Desenvolvido por Thalis Alves - Diretoria de Ensino / Setor de Inovação", align="C")
+# ------------------------------------------
+
 def criar_pdf(s, b, a, r, data_ia):
-    pdf = FPDF()
+    # Usando a sua classe com rodapé em vez do PDF padrão
+    pdf = PDF_HUSF()
     pdf.add_page()
     
     # Paleta de Cores de Elite
@@ -78,7 +92,7 @@ def criar_pdf(s, b, a, r, data_ia):
     pdf.set_font("helvetica", "B", 18)
     pdf.cell(0, 15, "RELATORIO DE PRECEPTORIA - SBAR", ln=True, align="C")
     pdf.set_font("helvetica", "I", 11)
-    pdf.cell(0, 5, "Hospital Universitário Sagrada Saúde", ln=True, align="C")
+    pdf.cell(0, 5, "Hospital Universitario Sagrada Família - HUSF", ln=True, align="C")
     pdf.ln(15)
 
     # 1. O QUE O ALUNO ENVIOU
@@ -150,7 +164,7 @@ def send_email(to_email, data_ia, s, b, a, r):
             "sender": {"name": "Preceptoria HUSF", "email": os.getenv("SMTP_USER", "contato@husf.com.br")},
             "to": [{"email": to_email}],
             "subject": "Sua Avaliação SBAR Chegou! - HUSF",
-            "textContent": "Olá, Doutor(a)! O Preceptor IA já analisou o seu caso clínico. Segue em anexo o relatório detalhado em PDF com as correções e o gabarito padrão-ouro. Bons estudos!",
+            "textContent": "Olá, Doutor(a) e Enfermeiro(a)! O Preceptor IA já analisou o seu caso clínico. Segue em anexo o relatório detalhado em PDF com as correções e o gabarito padrão-ouro. Bons estudos!",
             "attachment": [{"content": pdf_base64, "name": "Relatorio_SBAR_HUSF.pdf"}]
         }
         
